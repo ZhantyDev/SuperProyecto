@@ -4,3 +4,22 @@ Alejo se la come
 
 instalar cosos: 
 pip install -r ./api/requirements.txt
+
+Construir docker 
+docker-compose -f infra/docker-compose.yml up --build -d
+
+En el contenedor de spark
+docker exec -it spark_master bash
+spark-submit /opt/bitnami/spark/app/model.py
+
+en terminal Fuera del contenedor
+docker exec -it spark_master python /opt/bitnami/spark/app/generator.py
+
+en otra terminal
+docker exec -it spark_master spark-submit --packages org.mongodb.spark:mongo-spark-connector_2.12:10.2.1 /opt/bitnami/spark/app/ingestion.py
+
+para entrar al shell de mongo
+docker exec -it mongo_db mongosh
+    use sentimientos_db 
+    db.predicciones.find().pretty()
+deveria mostrar un json con los sentimientos
