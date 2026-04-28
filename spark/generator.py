@@ -1,6 +1,7 @@
 import socket
 import time
 import csv
+import os
 
 def start_generator():
     host = '0.0.0.0'
@@ -14,15 +15,19 @@ def start_generator():
     conn, addr = server_socket.accept()
     print(f"Conectado exitosamente con {addr}")
 
+    # Asegura que la ruta sea correcta, asumiendo que ejecutas desde /spark
+    dataset_path = os.path.join('dataset', 'dataset_sentimientos_500.csv')
+
     try:
-        with open('/dataset/dataset_sentimientos_500.csv', 'r', encoding='utf-8') as file:
+        with open(dataset_path, 'r', encoding='utf-8') as file:
             reader = csv.reader(file)
             header = next(reader) 
             for row in reader:
                 if len(row) == 2:
-                    message = f"{row[0]}|{row[1]}\n"
+                    # Usar un delimitador más seguro
+                    message = f"{row[0]}|||{row[1]}\n"
                     conn.send(message.encode('utf-8'))
-                    time.sleep(1) 
+                    time.sleep(1) # Simula el tiempo real
     except Exception as e:
         print(f"Error durante la transmision: {e}")
     finally:

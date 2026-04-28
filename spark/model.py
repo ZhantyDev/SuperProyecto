@@ -2,8 +2,9 @@ from pyspark.sql import SparkSession
 from pyspark.ml import Pipeline
 from pyspark.ml.feature import Tokenizer, StopWordsRemover, HashingTF, IDF, StringIndexer, IndexToString
 from pyspark.ml.classification import NaiveBayes
+import os
 
-def entrenar_y_probar():
+def entrenar_y_guardar():
     spark = SparkSession.builder \
         .appName("SentimentModelTraining") \
         .getOrCreate()
@@ -11,22 +12,23 @@ def entrenar_y_probar():
 
     print("Cargando el dataset y entrenando el modelo clasificador...")
     
-    df = spark.read.csv("dataset_sentimientos_500.csv", header=True, inferSchema=True)
+    # Ajustar ruta
+    dataset_path = os.path.join('dataset', 'dataset_sentimientos_500.csv')
+    df = spark.read.csv(dataset_path, header=True, inferSchema=True)
 
     indexer = StringIndexer(inputCol="etiqueta", outputCol="label")
     tokenizer = Tokenizer(inputCol="texto", outputCol="palabras")
     
     remover = StopWordsRemover(inputCol="palabras", outputCol="palabras_limpias")
-    try:
-        remover.setStopWords(StopWordsRemover.loadDefaultStopWords("spanish"))
-    except:
-        pass 
+    # Es vital asegurarse de que se aplican los stopwords en español
+    remover.setStopWords(StopWordsRemover.loadDefaultStopWords("spanish"))
         
     hashingTF = HashingTF(inputCol="palabras_limpias", outputCol="rawFeatures", numFeatures=2000)
     idf = IDF(inputCol="rawFeatures", outputCol="features")
     
     nb = NaiveBayes(labelCol="label", featuresCol="features", smoothing=1.0, modelType="multinomial")
     
+    # Asegúrate de mapear las etiquetas correctas
     labelConverter = IndexToString(inputCol="prediction", outputCol="intencion_predicha", labels=indexer.fit(df).labels)
 
     pipeline = Pipeline(stages=[indexer, tokenizer, remover, hashingTF, idf, nb, labelConverter])
@@ -34,20 +36,16 @@ def entrenar_y_probar():
     
     print("\nEl modelo Naive Bayes ha sido entrenado con exito.")
     
-    while True:
-        mensaje = input("\nEscribe un mensaje para analizar (o 'salir' para terminar): ")
-        if mensaje.lower() == 'salir':
-            print("Cerrando el probador interactivo...")
-            break
-            
-        if not mensaje.strip():
-            continue
-            
-        test_df = spark.createDataFrame([(mensaje,)], ["texto"])
-        prediccion = modelo.transform(test_df)
-        resultado = prediccion.select("intencion_predicha").collect()[0][0]
-        
-        print(f">> Intencion calculada por el modelo: {resultado}")
+    # --- GUARDAR EL MODELO ---
+    model_path = os.path.join('models', 'naive_bayes_sentiment_model')
+    modelo.write().overwrite().save(model_path)
+    print(f"Modelo guardado en: {model_path}")
+    
+    # La prueba interactiva está bien, pero opcional para producción
+    print("\nPrueba rápida:")
+    test_df = spark.createDataFrame([("el servicio fue terrible, muy malo",)], ["texto"])
+    prediccion = modelo.transform(test_df)
+    prediccion.select("texto", "intencion_predicha").show(truncate=False)
 
 if __name__ == "__main__":
-    entrenar_y_probar()
+    entrenar_y_guardar()
