@@ -1,0 +1,63 @@
+pipeline {
+    agent any
+
+    // Definimos variables de entorno para usar en los stages
+    environment {
+        COMPOSE_DIR = 'infra'
+        API_DIR = 'api'
+    }
+
+    stages {
+        stage('1. Checkout del Código') {
+            steps {
+                echo 'Clonando el repositorio desde GitHub...'
+                // Reemplaza esta URL con la de tu repositorio público de GitHub
+                git branch: 'main', url: 'https://github.com/TU_USUARIO/PROYECTO-BIG-DATA.git'
+            }
+        }
+
+        stage('2. Pruebas y Calidad (Linting)') {
+            steps {
+                echo 'Ejecutando pruebas estáticas sobre el código Python...'
+                // Aquí podrías ejecutar flake8 o pytest para la API o los scripts de Spark
+                // Ejemplo (comentado porque requiere configuración previa):
+                // sh 'pip install flake8'
+                // sh "flake8 ${API_DIR}/app.py"
+                echo '✓ Pruebas simuladas pasadas con éxito.'
+            }
+        }
+
+        stage('3. Construcción (Build)') {
+            steps {
+                echo 'Construyendo las imágenes de Docker necesarias...'
+                // Usamos docker-compose build para construir la imagen de Flask
+                // basándose en su Dockerfile, antes de levantar el entorno
+                dir("${COMPOSE_DIR}") {
+                    sh 'docker-compose build'
+                }
+            }
+        }
+
+        stage('4. Despliegue (Deploy)') {
+            steps {
+                echo 'Desplegando la infraestructura completa con Docker Compose...'
+                dir("${COMPOSE_DIR}") {
+                    // Bajamos contenedores antiguos por si los hay
+                    sh 'docker-compose down'
+                    // Levantamos la nueva infraestructura en segundo plano (-d)
+                    sh 'docker-compose up -d'
+                }
+            }
+        }
+    }
+
+    // Acciones posteriores según el resultado del pipeline
+    post {
+        success {
+            echo '✅ Pipeline ejecutado con éxito. MongoDB, Spark y Flask están corriendo.'
+        }
+        failure {
+            echo '❌ El pipeline falló. Revisa los logs de los stages en Jenkins.'
+        }
+    }
+}

@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  # Base de Datos NoSQL
+  mongodb:
+    image: mongo:latest
+    container_name: mongo_db
+    ports:
+      - "27017:27017"
+    networks:
+      - bigdata_network
+
+  # Procesamiento Spark (Master)
+  spark-master:
+    image: bitnami/spark:latest
+    container_name: spark_master
+    environment:
+      - SPARK_MODE=master
+    ports:
+      - "8080:8080" # UI de Spark
+      - "7077:7077"
+    networks:
+      - bigdata_network
+
+  # Microservicio API Flask
+  flask-api:
+    build: ../api
+    container_name: flask_api
+    depends_on:
+      - mongodb
+    ports:
+      - "5000:5000"
+    networks:
+      - bigdata_network
+
+  # Automatización Jenkins
+  jenkins:
+    image: jenkins/jenkins:lts
+    container_name: jenkins_ci
+    privileged: true
+    user: root
+    ports:
+      - "8081:8080" # UI de Jenkins
+      - "50000:50000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock # Para que Jenkins use Docker
+    networks:
+      - bigdata_network
+
+networks:
+  bigdata_network:
+    driver: bridge
