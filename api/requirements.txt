@@ -1,0 +1,18 @@
+# --- Procesamiento y Machine Learning ---
+pyspark==3.5.0
+numpy
+pandas
+
+# --- Ciencia de Datos y Visualización (Para tus Notebooks) ---
+matplotlib
+seaborn
+scikit-learn
+
+# --- Backend y Base de Datos ---
+Flask==2.3.3
+pymongo==4.5.0
+flask-cors        # Vital para que Power BI o el Front-end no tengan bloqueos de seguridad
+
+# --- Utilidades ---
+python-dotenv     # Para gestionar credenciales de Mongo de forma segura
+requests          # Para probar tus propios endpoints

@@ -1,0 +1,82 @@
+Fase 1: Cimientos e Infraestructura (Docker & Estructura)
+    Antes de escribir código, debemos asegurar que todos los servicios puedan "hablar" entre sí.
+
+    Diseño de la estructura de carpetas: Crea el repositorio con la estructura solicitada (/spark, /api, /infra, /docs).
+
+    Configuración de Docker Compose: Define un archivo docker-compose.yml que levante:
+
+        MongoDB: Para la persistencia.
+
+        Spark (Master y Worker): Para el procesamiento.
+
+        Flask: Para la API.
+
+        Jenkins: Para la automatización.
+
+    Redes: Asegúrate de que todos los contenedores estén en la misma red interna de Docker para que Flask pueda conectarse a Mongo y Spark a Mongo.
+
+Fase 2: Desarrollo del Cerebro (PySpark & NLP)
+    El modelo es el núcleo. Con 500 registros, el entrenamiento será rápido.
+
+    Limpieza y Preprocesamiento: Crea un script/notebook para:
+
+        Cargar dataset_sentimientos_500.csv.
+
+        Aplicar limpieza (quitar caracteres especiales, minúsculas).
+
+        Tokenización y eliminación de Stopwords.
+
+        Pipeline de Machine Learning:
+
+        Vectorización usando HashingTF y IDF.
+
+        Entrenamiento con el algoritmo Naive Bayes.
+
+    Exportación: Guarda el modelo entrenado para que el pipeline de streaming pueda cargarlo y usarlo para predecir en tiempo real.
+
+Fase 3: Ingesta en Streaming y Persistencia
+    Aquí es donde los datos "cobran vida".
+
+    Simulador de Ingesta: Crea un script pequeño en Python que lea el CSV línea por línea y las envíe a través de un Socket (puerto TCP) para simular el tráfico de redes sociales.
+
+    Spark Structured Streaming:
+
+        Configura Spark para leer del socket.
+
+        Aplica el modelo cargado (Fase 2) a cada micro-lote de datos.
+
+        Conector MongoDB: Configura el sink de Spark para escribir los resultados directamente en una colección de MongoDB (incluyendo el timestamp y la confianza).
+
+Fase 4: Exposición y Visualización (Flask & Power BI)
+    Hacer que los datos sean útiles para el usuario final.
+
+    Desarrollo de la API en Flask:
+
+        Endpoint /sentiments: Consulta a Mongo con filtros (ej. solo negativos).
+
+        Endpoint /stats: Agregaciones de Mongo para mostrar cuántos hay de cada categoría.
+
+        Endpoint /predict: Recibe un texto nuevo, lo pasa por el modelo y devuelve la predicción.
+
+    Diseño en Power BI:
+
+        Usa el conector "Web" de Power BI para obtener datos de los endpoints de tu API de Flask.
+
+        Crea los gráficos: Pie chart para distribución, Line chart para el tiempo y una tabla de detalle.
+
+    Fase 5: Automatización y Entrega (Jenkins & Demo)
+    El cierre profesional del proyecto.
+
+    Jenkinsfile: Define los stages:
+
+        Lint/Test: Validar el código Python.
+
+        Build: Construir las imágenes de Docker.
+
+        Deploy: Levantar los contenedores con Docker Compose.
+
+Documentación (README): Escribe instrucciones claras. Alguien que clone tu repo debería poder ejecutar docker-compose up y tener todo funcionando.
+
+Video Demo: Prepara un guion corto. Muestra el código, cómo Jenkins hace el build, cómo los datos fluyen por la consola de Spark y, finalmente, cómo Power BI se actualiza.
+
+Recomendación técnica: Dado que vas a usar PySpark con MongoDB, asegúrate de incluir el conector mongo-spark-connector en la configuración de tu SparkSession para facilitar la escritura de los DataFrames de streaming.

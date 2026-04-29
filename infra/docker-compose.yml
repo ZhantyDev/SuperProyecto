@@ -1,0 +1,68 @@
+version: '3.8'
+
+services:
+  # 1. Base de Datos NoSQL
+  mongodb:
+    image: mongo:latest
+    container_name: mongo_db
+    ports:
+      - "27017:27017"
+    networks:
+      - bigdata_network
+
+  # 2. Spark Master (Construido con los conectores de Mongo)
+  spark-master:
+    build: ../spark        # USA TU DOCKERFILE PERSONALIZADO
+    container_name: spark_master
+    environment:
+      - SPARK_MODE=master
+    ports:
+      - "8080:8080"        # UI de Spark
+      - "7077:7077"        # Puerto de comunicación interna
+    volumes:
+      - ../spark:/opt/bitnami/spark/app  # MAPEO DE TUS SCRIPTS Y DATASET
+    networks:
+      - bigdata_network
+
+  # 3. Spark Worker (Para que sea una arquitectura real)
+  spark-worker:
+    image: bitnami/spark:latest
+    container_name: spark_worker
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark-master:7077
+    depends_on:
+      - spark-master
+    networks:
+      - bigdata_network
+
+  # 4. Microservicio API Flask
+  flask-api:
+    build: ../api
+    container_name: flask_api
+    depends_on:
+      - mongodb
+    ports:
+      - "5000:5000"
+    volumes:
+      - ../api:/app        # Permite ver cambios en el código sin reiniciar todo
+    networks:
+      - bigdata_network
+
+  # 5. Automatización Jenkins
+  jenkins:
+    image: jenkins/jenkins:lts
+    container_name: jenkins_ci
+    privileged: true
+    user: root
+    ports:
+      - "8081:8080"
+      - "50000:50000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - bigdata_network
+
+networks:
+  bigdata_network:
+    driver: bridge
