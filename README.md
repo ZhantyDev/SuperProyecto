@@ -23,3 +23,14 @@ docker exec -it mongo_db mongosh
     use sentimientos_db 
     db.predicciones.find().pretty()
 deveria mostrar un json con los sentimientos
+
+Trae estado de los containers/imagenes
+docker ps -a
+
+PARA REINICIAR EL DOCKER
+Apaga
+docker-compose -f infra/docker-compose.yml down
+Limpia
+docker rm -f spark_master infra-spark-worker-1
+vuelve y monta
+docker-compose -f infra/docker-compose.yml up --build -d
