@@ -34,3 +34,8 @@ Limpia
 docker rm -f spark_master infra-spark-worker-1
 vuelve y monta
 docker-compose -f infra/docker-compose.yml up --build -d
+
+entrar al contenedor
+docker exec -it spark_master bash
+ejecutar el coso
+spark-submit /opt/bitnami/spark/app/model.py
