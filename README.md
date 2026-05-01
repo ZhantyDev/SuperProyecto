@@ -39,3 +39,7 @@ entrar al contenedor
 docker exec -it spark_master bash
 ejecutar el coso
 spark-submit /opt/bitnami/spark/app/model.py
+activa el generador
+docker exec -it spark_master python /opt/bitnami/spark/app/generator.py
+intenta conectar el ingestador
+docker exec -it spark_master bash -c "export SPARK_SUBMIT_OPTS='-Duser.home=/tmp' && spark-submit --packages org.mongodb.spark:mongo-spark-connector_2.12:10.2.1 /opt/bitnami/spark/app/ingestion.py"
