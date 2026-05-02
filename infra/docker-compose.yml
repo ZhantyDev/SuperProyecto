@@ -51,7 +51,7 @@ services:
     ports:
       - "5000:5000"
     volumes:
-      - ../api:/app        # Permite ver cambios en el código sin reiniciar todo
+      - ../spark:/opt/bitnami/spark/app  # ACCESO AL MODELO ENTRENADO
     networks:
       - bigdata_network
 
