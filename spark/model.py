@@ -65,9 +65,9 @@ def entrenar_y_guardar():
     # 6. Prueba rápida de validación
     print("\nValidando con ejemplos críticos:")
     test_data = spark.createDataFrame([
-        ("el servicio fue terrible, muy malo",),
-        ("excelente atención y muy rápido",),
-        ("no me gusto para nada, pésimo",)
+        ("Keeps crashing always",),
+        ("The performance is amazing",),
+        ("We are now at v3.3",)
     ], ["texto"])
     
     # Aplicamos la misma limpieza de minúsculas a la prueba
