@@ -6,7 +6,7 @@
  */
 
 class StorageAPI {
-    constructor(apiUrl = 'http://localhost:5000') {
+    constructor(apiUrl = 'http://localhost:5005') {
         this.apiUrl = apiUrl;
     }
 
@@ -63,7 +63,13 @@ class StorageAPI {
             }
 
             const data = await response.json();
-            console.log(`✓ Historial obtenido: ${data.total} registros`);
+            // El backend puede devolver directamente un array de predicciones
+            if (Array.isArray(data)) {
+                console.log(`✓ Historial obtenido: ${data.length} registros`);
+                return data;
+            }
+
+            console.log(`✓ Historial obtenido: ${Array.isArray(data.predicciones) ? data.predicciones.length : 0} registros`);
             return data.predicciones || [];
 
         } catch (error) {
@@ -102,14 +108,11 @@ class StorageAPI {
      */
     async obtenerResumen() {
         try {
-            const [historial, estadisticas] = await Promise.all([
-                this.obtenerHistorial(10),
-                this.obtenerEstadisticas()
-            ]);
+            const historial = await this.obtenerHistorial(10);
 
             return {
                 historialReciente: historial,
-                estadisticas: estadisticas,
+                estadisticas: [],
                 timestamp: new Date().toISOString()
             };
 

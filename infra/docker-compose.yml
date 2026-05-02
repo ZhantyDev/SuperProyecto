@@ -49,7 +49,7 @@ services:
     depends_on:
       - mongodb
     ports:
-      - "5000:5000"
+      - "5005:5005"  # CAMBIADO DE 5000 A 5005
     volumes:
       - ../spark:/opt/bitnami/spark/app  # ACCESO AL MODELO ENTRENADO
     networks:

@@ -3,118 +3,123 @@ from flask_cors import CORS
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import lower, col
 from pyspark.ml import PipelineModel
+from pymongo import MongoClient
 import os
 from datetime import datetime
-from storage_api import almacenar_prediccion, obtener_predicciones, obtener_estadisticas
+
+# Importamos las funciones de persistencia de tu storage_api personalizada
+try:
+    from storage_api import almacenar_prediccion, obtener_predicciones, obtener_estadisticas
+except ImportError:
+    # Funciones de respaldo en caso de que no encuentre el archivo storage_api.py
+    def almacenar_prediccion(**kwargs): print("⚠️ storage_api no disponible localmente")
+    def obtener_predicciones(limite=50): return []
+    def obtener_estadisticas(): return {}
 
 app = Flask(__name__)
+# CORS es fundamental para que tu interfaz web pueda comunicarse con la API
 CORS(app)
 
-# Configuración de MongoDB (se maneja en storage_api)
+# --- 1. CONFIGURACIÓN DE MONGODB ---
+# La URI apunta al servicio 'mongodb' definido en tu docker-compose[cite: 2]
+MONGO_URI = os.getenv("MONGO_URI", "mongodb://mongodb:27017/")
+client = MongoClient(MONGO_URI)
+db = client["sentiment_db"]
+collection = db["predictions"]
 
-# Configuración de Spark y modelo
+# --- 2. CONFIGURACIÓN DE SPARK Y MODELO ---
 spark = SparkSession.builder \
     .appName("SentimentPredictionAPI") \
     .getOrCreate()
 spark.sparkContext.setLogLevel("ERROR")
 
+# Ruta interna donde Docker mapea tu modelo entrenado[cite: 2]
 model_path = '/opt/bitnami/spark/app/models/naive_bayes_sentiment_model'
 modelo_cargado = None
 
 try:
     modelo_cargado = PipelineModel.load(model_path)
-    print(f"✓ Modelo cargado correctamente desde: {model_path}")
+    print(f"✓ Modelo cargado correctamente desde: {model_path}[cite: 2]")
 except Exception as e:
-    print(f"✗ Error al cargar el modelo: {e}")
+    print(f"✗ Error al cargar el modelo: {e}[cite: 2]")
 
-
+# --- 3. RUTAS DE LA API ---
 
 @app.route('/')
 def index():
+    """Ruta base para verificar que el servidor responde[cite: 2]"""
     return jsonify({
-        "mensaje": "API de Análisis de Sentimientos en Tiempo Real",
-        "estado": "Activa"
+        "proyecto": "SentimentStream",
+        "estado": "Activa",
+        "puerto": 5005
     })
 
 @app.route('/predict', methods=['POST'])
 def predict_sentiment():
+    """Endpoint principal para recibir comentarios del frontend[cite: 2]"""
     try:
         if modelo_cargado is None:
             return jsonify({'error': 'El modelo no está disponible'}), 500
 
-        # Recibir los datos del frontend
         data = request.get_json()
         user_text = data.get('text', '')
 
         if not user_text:
             return jsonify({'error': 'El campo de texto está vacío'}), 400
 
-        # Preparar datos y hacer predicción con el modelo real
-        print(f"Analizando: {user_text}")
-        
-        # Crear DataFrame con el texto
+        # Procesamiento en tiempo real con Spark[cite: 2]
         df_entrada = spark.createDataFrame([(user_text,)], ["texto"])
-        
-        # Aplicar la misma limpieza que en el entrenamiento (minúsculas)
         df_entrada = df_entrada.withColumn("texto", lower(col("texto")))
         
-        # Transformar con el pipeline del modelo
+        # Ejecutar predicción
         df_prediccion = modelo_cargado.transform(df_entrada)
         
-        # Extraer el resultado
+        # Extraer el resultado (usando 'intencion_predicha' de tu Model.py)[cite: 2]
         resultado = df_prediccion.select("intencion_predicha").collect()[0][0]
 
-        # Almacenar predicción en MongoDB usando storage_api
+        # Guardar el resultado en la base de datos MongoDB[cite: 2]
         try:
             almacenar_prediccion(
                 texto=user_text,
                 prediccion=resultado,
-                confianza=None  # El modelo Naive Bayes no proporciona scores de confianza directamente
+                confianza=1.0  # Naive Bayes no proporciona score directo de confianza
             )
-        except Exception as storage_error:
-            print(f"Advertencia: No se pudo almacenar en BD: {storage_error}")
-            # La predicción se sigue retornando aunque falle el almacenamiento
+        except Exception as db_error:
+            print(f"Advertencia: No se pudo persistir en MongoDB: {db_error}")
 
-        # Retornar la respuesta al frontend
         return jsonify({
             'sentiment': resultado,
             'status': 'processed',
-            'text': user_text
+            'text': user_text,
+            'timestamp': datetime.now().isoformat()
         })
 
     except Exception as e:
-        print(f"Error en predicción: {e}")
+        print(f"Error interno en predicción: {e}")
         return jsonify({'error': str(e)}), 500
 
+# ENDPOINT MULTILINGÜE PARA EL HISTORIAL (Evita errores 404)[cite: 2]
+@app.route('/sentiments', methods=['GET'])
+@app.route('/sentimientos', methods=['GET'])
 @app.route('/historial', methods=['GET'])
 def get_historial():
-    """Obtiene el historial de predicciones almacenadas"""
+    """Retorna los datos almacenados para Power BI y la Interfaz[cite: 2]"""
     try:
-        limite = request.args.get('limite', 50, type=int)
-        predicciones = obtener_predicciones(limite=limite)
-        return jsonify({
-            'total': len(predicciones),
-            'predicciones': predicciones
-        })
+        # Consultamos directamente a la colección de MongoDB[cite: 2]
+        predicciones = list(collection.find({}, {'_id': 0}).sort("timestamp", -1).limit(50))
+        return jsonify(predicciones), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
-@app.route('/sentimientos', methods=['GET'])
-def get_sentimientos():
-    """Alias para /historial (retrocompatibilidad)"""
-    return get_historial()
 
 @app.route('/stats', methods=['GET'])
 def get_stats():
-    """Obtiene estadísticas de sentimientos analizados"""
+    """Endpoint para obtener métricas generales[cite: 2]"""
     try:
-        estadisticas = obtener_estadisticas()
-        return jsonify({
-            'estadisticas': estadisticas
-        })
+        return jsonify({'estadisticas': obtener_estadisticas()})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+# --- 4. LANZAMIENTO ---
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=5000)
-    
+    # Escuchamos en 0.0.0.0 para que el puerto sea visible fuera de Docker[cite: 2]
+    app.run(host='0.0.0.0', port=5005, debug=False)

@@ -63,7 +63,7 @@ function initInterface() {
         try {
             console.log("Enviando a la API:", comentario); // Esto aparecerá en la consola del navegador
 
-            const response = await fetch('http://localhost:5000/predict', {
+            const response = await fetch('http://localhost:5005/predict', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -119,7 +119,6 @@ function initInterface() {
                 historialBtn.disabled = true;
 
                 const historial = await storage.obtenerHistorial(20);
-                const estadisticas = await storage.obtenerEstadisticas();
 
                 // Limpiar contenedor
                 historialContainer.innerHTML = '';
