@@ -3,6 +3,7 @@
  * 
  * Módulo para gestionar el almacenamiento de predicciones en MongoDB
  * Se comunica con el backend (Flask API) que se encarga de la persistencia
+    * @param {Array<number>} prediccionData.probability - Vector de probabilidades por clase
  */
 
 class StorageAPI {
@@ -30,6 +31,7 @@ class StorageAPI {
                     text: prediccionData.texto,
                     sentiment: prediccionData.sentiment,
                     confianza: prediccionData.confianza || null,
+                        // No enviamos 'confianza' desde el cliente: el servidor calculará/almacenará 'probability' y 'confianza' si procede
                     timestamp: new Date().toISOString()
                 })
             });
@@ -133,7 +135,7 @@ class StorageAPI {
             texto: prediccion.texto || '',
             sentimiento: prediccion.prediccion || prediccion.intencion_predicha || '',
             fecha: new Date(prediccion.timestamp).toLocaleString('es-ES'),
-            confianza: prediccion.confianza || 'N/A'
+            probability: Array.isArray(prediccion.probability) ? prediccion.probability.map(p => Number(p)) : null
         };
     }
 

@@ -28,7 +28,7 @@ function initInterface() {
 
     const historialBtn = document.createElement('button');
     historialBtn.className = 'historial-btn';
-    historialBtn.textContent = '📊 Historial';
+    historialBtn.textContent = 'Historial';
 
     const buttonGroup = document.createElement('div');
     buttonGroup.className = 'button-group';
@@ -94,6 +94,15 @@ function initInterface() {
             // Limpiar input
             input.value = '';
 
+            // Si el historial está abierto, recargarlo para reflejar la nueva entrada
+            try {
+                if (historialContainer.style.display === 'block') {
+                    await cargarHistorial(20);
+                }
+            } catch (err) {
+                console.warn('No se pudo recargar historial automáticamente:', err);
+            }
+
         } catch (error) {
             console.error("Hubo un error:", error);
             floatingResult.textContent = "Error API";
@@ -110,60 +119,62 @@ function initInterface() {
         }
     });
 
+    // Función para cargar y renderizar el historial
+    async function cargarHistorial(limite = 20) {
+        historialBtn.textContent = '⏳ Cargando...';
+        historialBtn.disabled = true;
+        try {
+            const historial = await storage.obtenerHistorial(limite);
+            historialContainer.innerHTML = '';
+
+            const titulo = document.createElement('h3');
+            titulo.textContent = 'Historial de Análisis';
+            historialContainer.appendChild(titulo);
+
+            if (historial.length > 0) {
+                const listDiv = document.createElement('div');
+                listDiv.className = 'historial-list';
+
+                historial.forEach(pred => {
+                    const item = document.createElement('div');
+                    item.className = 'historial-item';
+                    const fecha = new Date(pred.timestamp).toLocaleString('es-ES');
+                    const sentimiento = pred.prediccion || pred.intencion_predicha || 'desconocido';
+
+                    // Mostrar el vector de probabilidades (si existe) con 3 decimales
+                    const probDisplay = Array.isArray(pred.probability) ? '[' + pred.probability.map(p => Number(p).toFixed(3)).join(', ') + ']' : 'N/A';
+                    item.innerHTML = `
+                        <p><strong>Texto:</strong> "${pred.texto}"</p>
+                        <p><strong>Sentimiento:</strong> <span class="sentiment-${sentimiento.toLowerCase()}">${sentimiento}</span></p>
+                        <p><strong>Probabilidades:</strong> ${probDisplay}</p>
+                        <p><strong>Fecha:</strong> ${fecha}</p>
+                    `;
+                    listDiv.appendChild(item);
+                });
+
+                historialContainer.appendChild(listDiv);
+            } else {
+                const empty = document.createElement('p');
+                empty.className = 'historial-empty';
+                empty.textContent = 'No hay predicciones almacenadas aún.';
+                historialContainer.appendChild(empty);
+            }
+
+            historialContainer.style.display = 'block';
+            historialBtn.textContent = 'Cerrar';
+        } catch (error) {
+            console.error('Error cargando historial:', error);
+            historialContainer.innerHTML = '<p style="color: red;">Error al cargar el historial</p>';
+            historialContainer.style.display = 'block';
+        } finally {
+            historialBtn.disabled = false;
+        }
+    }
+
     // Agregar evento para mostrar/ocultar historial
     historialBtn.addEventListener('click', async () => {
         if (historialContainer.style.display === 'none') {
-            // Cargar historial desde MongoDB
-            try {
-                historialBtn.textContent = '⏳ Cargando...';
-                historialBtn.disabled = true;
-
-                const historial = await storage.obtenerHistorial(20);
-
-                // Limpiar contenedor
-                historialContainer.innerHTML = '';
-
-                // Crear título
-                const titulo = document.createElement('h3');
-                titulo.textContent = 'Historial de Análisis';
-                historialContainer.appendChild(titulo);
-
-                // Mostrar últimas predicciones
-                if (historial.length > 0) {
-                    const listDiv = document.createElement('div');
-                    listDiv.className = 'historial-list';
-
-                    historial.forEach(pred => {
-                        const item = document.createElement('div');
-                        item.className = 'historial-item';
-                        const fecha = new Date(pred.timestamp).toLocaleString('es-ES');
-                        const sentimiento = pred.prediccion || pred.intencion_predicha || 'desconocido';
-
-                        item.innerHTML = `
-                            <p><strong>Texto:</strong> "${pred.texto}"</p>
-                            <p><strong>Sentimiento:</strong> <span class="sentiment-${sentimiento.toLowerCase()}">${sentimiento}</span></p>
-                            <p><strong>Fecha:</strong> ${fecha}</p>
-                        `;
-                        listDiv.appendChild(item);
-                    });
-
-                    historialContainer.appendChild(listDiv);
-                } else {
-                    const empty = document.createElement('p');
-                    empty.className = 'historial-empty';
-                    empty.textContent = 'No hay predicciones almacenadas aún.';
-                    historialContainer.appendChild(empty);
-                }
-
-                historialContainer.style.display = 'block';
-                historialBtn.textContent = 'Cerrar';
-            } catch (error) {
-                console.error('Error cargando historial:', error);
-                historialContainer.innerHTML = '<p style="color: red;">Error al cargar el historial</p>';
-                historialContainer.style.display = 'block';
-            } finally {
-                historialBtn.disabled = false;
-            }
+            await cargarHistorial(20);
         } else {
             // Ocultar historial
             historialContainer.style.display = 'none';

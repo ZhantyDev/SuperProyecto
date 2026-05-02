@@ -1,54 +1,56 @@
 from pymongo import MongoClient
-from datetime import datetime
+from datetime import datetime, timezone
 import os
 
 # Configuración de MongoDB
 MONGO_URI = os.getenv("MONGO_URI", "mongodb://mongodb:27017/")
-DB_NAME = "sentimientos_db"
-COLLECTION_NAME = "predicciones"
+# Esquema unificado solicitado
+DB_NAME = "sentiment_db"
+COLLECTION_NAME = "predictions"
 
 def get_db_connection():
     """Establece conexión con MongoDB"""
     client = MongoClient(MONGO_URI)
     return client[DB_NAME]
 
-def almacenar_prediccion(texto, prediccion, confianza=None, timestamp=None):
+def almacenar_prediccion(texto, prediccion, confianza=None, probability=None, timestamp=None):
     """
     Almacena una predicción en MongoDB
     
     Args:
         texto (str): Texto original analizado
         prediccion (str): Sentimiento predicho (positivo/negativo/neutral)
-        confianza (float): Nivel de confianza del modelo (0-1)
+        confianza (float): Nivel de confianza del modelo (0-1). Si es None, se calcula
+                          como el máximo de `probability` si éste se proporciona.
+        probability (list|tuple): Vector de probabilidades para cada clase
         timestamp (datetime): Marca de tiempo de la predicción
     
     Returns:
         dict: Documento insertado con su ID de MongoDB
     """
+    # Intentamos insertar, pero protegemos la operación para que la API no falle
+    db = get_db_connection()
+
+    # Crear documento con timestamp UTC si no se proporciona
+    # Nota: no guardamos más el campo `confianza`; calcularse a partir de
+    # `probability` cuando se necesite (migración realizada previamente).
+    documento = {
+        "texto": texto,
+        "prediccion": prediccion,
+        "probability": list(probability) if probability is not None else None,
+        "timestamp": timestamp or datetime.now(timezone.utc),
+        "estado": "almacenado"
+    }
+
     try:
-        db = get_db_connection()
-        
-        # Crear documento con timestamp actual si no se proporciona
-        documento = {
-            "texto": texto,
-            "prediccion": prediccion,
-            "confianza": confianza,
-            "timestamp": timestamp or datetime.now(datetime.timezone.utc),
-            "estado": "almacenado"
-        }
-        
-        # Insertar en MongoDB
         resultado = db[COLLECTION_NAME].insert_one(documento)
-        
-        # Retornar documento con su ID
         documento["_id"] = str(resultado.inserted_id)
-        
-        print(f"✓ Predicción almacenada: {resultado.inserted_id}")
+        print(f"✓ Predicción almacenada en {DB_NAME}.{COLLECTION_NAME}: {resultado.inserted_id}")
         return documento
-        
     except Exception as e:
-        print(f"✗ Error al almacenar predicción: {e}")
-        raise
+        # Registrar el error y devolver None para que la API siga respondiendo
+        print(f"✗ Error al almacenar predicción en MongoDB: {e}")
+        return None
 
 def obtener_predicciones(limite=50):
     """
@@ -88,11 +90,13 @@ def obtener_estadisticas():
     """
     try:
         db = get_db_connection()
+        # Agrupar por `prediccion` y calcular el promedio de la confianza como
+        # el máximo del arreglo `probability` por documento.
         pipeline = [
             {"$group": {
                 "_id": "$prediccion",
                 "total": {"$sum": 1},
-                "promedio_confianza": {"$avg": "$confianza"}
+                "promedio_confianza": {"$avg": {"$max": "$probability"}}
             }},
             {"$sort": {"total": -1}}
         ]

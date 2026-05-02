@@ -73,26 +73,58 @@ def predict_sentiment():
         
         # Ejecutar predicción
         df_prediccion = modelo_cargado.transform(df_entrada)
-        
+
         # Extraer el resultado (usando 'intencion_predicha' de tu Model.py)[cite: 2]
         resultado = df_prediccion.select("intencion_predicha").collect()[0][0]
 
-        # Guardar el resultado en la base de datos MongoDB[cite: 2]
+        # Extraer el vector de probabilidades (columna 'probability') si existe
+        probability_list = None
         try:
-            almacenar_prediccion(
+            prob_row = df_prediccion.select("probability").collect()[0][0]
+            # prob_row puede ser DenseVector/SparseVector; convertir a lista de floats
+            probability_list = [float(x) for x in prob_row]
+        except Exception:
+            probability_list = None
+
+        # Calcular confianza como el máximo de probability si está disponible
+        confianza_calc = None
+        if probability_list:
+            try:
+                confianza_calc = max(probability_list)
+            except Exception:
+                confianza_calc = None
+
+        # Log para depuración: mostrar probabilidades y confianza calculada
+        try:
+            print(f"DEBUG probability: {probability_list} | confianza_calc: {confianza_calc}")
+        except Exception:
+            pass
+
+        # Guardar el resultado en la base de datos MongoDB[cite: 2]
+        stored_doc = None
+        try:
+            stored_doc = almacenar_prediccion(
                 texto=user_text,
                 prediccion=resultado,
-                confianza=1.0  # Naive Bayes no proporciona score directo de confianza
+                confianza=confianza_calc,
+                probability=probability_list
             )
         except Exception as db_error:
             print(f"Advertencia: No se pudo persistir en MongoDB: {db_error}")
 
-        return jsonify({
+        resp = {
             'sentiment': resultado,
+            'probability': probability_list,
+            'confianza': confianza_calc,
             'status': 'processed',
             'text': user_text,
-            'timestamp': datetime.now().isoformat()
-        })
+            'timestamp': datetime.now().isoformat(),
+            'stored': bool(stored_doc)
+        }
+        if stored_doc:
+            resp['stored_document'] = stored_doc
+
+        return jsonify(resp)
 
     except Exception as e:
         print(f"Error interno en predicción: {e}")
@@ -105,8 +137,8 @@ def predict_sentiment():
 def get_historial():
     """Retorna los datos almacenados para Power BI y la Interfaz[cite: 2]"""
     try:
-        # Consultamos directamente a la colección de MongoDB[cite: 2]
-        predicciones = list(collection.find({}, {'_id': 0}).sort("timestamp", -1).limit(50))
+        # Usar la función de storage_api para obtener las predicciones
+        predicciones = obtener_predicciones(limite=50)
         return jsonify(predicciones), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
