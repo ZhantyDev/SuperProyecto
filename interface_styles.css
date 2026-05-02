@@ -1,0 +1,250 @@
+body, html {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    font-family: 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    background-image: url('image_0.png');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-color: #050510;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.ui-container {
+    position: absolute;
+    bottom: 1rem;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    z-index: 10;
+}
+
+.comment-input {
+    background-color: transparent;
+    border: 1px solid white;
+    color: white;
+    padding: 15px 25px;
+    font-size: 1.2rem;
+    border-radius: 4px;
+    width: 350px;
+    text-align: center;
+    outline: none;
+    transition: box-shadow 0.3s ease, border-color 0.3s ease, background-color 0.3s ease;
+    backdrop-filter: blur(2px);
+}
+
+.comment-input::placeholder {
+    color: rgba(255, 255, 255, 0.7);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-size: 1rem;
+}
+
+.comment-input:focus {
+    border-color: #87CEEB;
+    box-shadow: 0 0 15px rgba(135, 206, 235, 0.4);
+    background-color: rgba(0, 0, 0, 0.2);
+}
+
+.button-group {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.submit-btn {
+    background-color: rgba(0, 0, 0, 0.4);
+    border: 1px solid white;
+    color: white;
+    padding: 12px 40px;
+    font-size: 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    backdrop-filter: blur(2px);
+}
+
+.submit-btn:hover {
+    background-color: rgba(255, 255, 255, 0.15);
+    box-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
+}
+
+.submit-btn:active {
+    transform: translateY(1px);
+}
+
+.floating-result {
+    position: absolute;
+    top: 15%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-size: 3.5rem;
+    font-weight: bold;
+    text-shadow: 0 0 25px rgba(0, 0, 0, 0.9), 0 0 15px rgba(135, 206, 235, 0.8);
+    opacity: 0;
+    pointer-events: none;
+    z-index: 5;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+}
+
+.floating-result.show {
+    animation: floatReveal 3s ease forwards;
+}
+
+@keyframes floatReveal {
+    0% { transform: translate(-50%, -40%); opacity: 0; filter: blur(10px); }
+    15% { opacity: 1; filter: blur(0px); transform: translate(-50%, -50%); }
+    80% { opacity: 1; filter: blur(0px); transform: translate(-50%, -60%); }
+    100% { transform: translate(-50%, -70%); opacity: 0; filter: blur(5px); }
+}
+
+.historial-container {
+    display: none;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: rgba(0, 0, 0, 0.45);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: white;
+    border-radius: 8px;
+    padding: 30px;
+    max-width: 600px;
+    max-height: 70vh;
+    overflow-y: auto;
+    z-index: 100;
+    backdrop-filter: blur(12px);
+    box-shadow: 0 0 50px rgba(135, 206, 235, 0.2);
+}
+
+.historial-empty {
+    text-align: center;
+    color: rgba(255, 255, 255, 0.85);
+    margin: 0;
+}
+
+/* Estilos para el Historial */
+.historial-btn {
+    background-color: rgba(0, 0, 0, 0.4);
+    border: 1px solid white;
+    color: white;
+    padding: 12px 40px;
+    font-size: 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    backdrop-filter: blur(2px);
+}
+
+.historial-btn:hover {
+    background-color: rgba(100, 150, 200, 0.5);
+    box-shadow: 0 0 15px rgba(100, 150, 200, 0.3);
+}
+
+.historial-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.historial-container h3 {
+    color: #87CEEB;
+    margin-top: 0;
+    border-bottom: 2px solid rgba(135, 206, 235, 0.3);
+    padding-bottom: 15px;
+}
+
+.stats-summary {
+    background-color: rgba(100, 150, 200, 0.15);
+    border-left: 3px solid #87CEEB;
+    padding: 15px;
+    margin-bottom: 20px;
+    border-radius: 4px;
+}
+
+.stats-summary h4 {
+    color: #87CEEB;
+    margin: 0 0 10px 0;
+}
+
+.stats-summary p {
+    color: rgba(255, 255, 255, 0.8);
+    margin: 5px 0;
+}
+
+.historial-list {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.historial-item {
+    background-color: rgba(50, 50, 70, 0.5);
+    border: 1px solid rgba(135, 206, 235, 0.3);
+    border-radius: 4px;
+    padding: 12px;
+    margin-bottom: 10px;
+    transition: all 0.3s ease;
+}
+
+.historial-item:hover {
+    background-color: rgba(50, 50, 70, 0.8);
+    border-color: rgba(135, 206, 235, 0.6);
+    box-shadow: 0 0 10px rgba(135, 206, 235, 0.2);
+}
+
+.historial-item p {
+    color: rgba(255, 255, 255, 0.85);
+    margin: 5px 0;
+    font-size: 0.9rem;
+}
+
+.historial-item strong {
+    color: #87CEEB;
+}
+
+.sentiment-positivo {
+    color: #4ade80;
+    font-weight: bold;
+}
+
+.sentiment-negativo {
+    color: #f87171;
+    font-weight: bold;
+}
+
+.sentiment-neutral {
+    color: #fbbf24;
+    font-weight: bold;
+}
+
+/* Scrollbar personalizado para el historial */
+.historial-container::-webkit-scrollbar {
+    width: 8px;
+}
+
+.historial-container::-webkit-scrollbar-track {
+    background: rgba(135, 206, 235, 0.1);
+    border-radius: 4px;
+}
+
+.historial-container::-webkit-scrollbar-thumb {
+    background: rgba(135, 206, 235, 0.5);
+    border-radius: 4px;
+}
+
+.historial-container::-webkit-scrollbar-thumb:hover {
+    background: rgba(135, 206, 235, 0.8);
+}
